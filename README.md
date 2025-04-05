@@ -1,70 +1,66 @@
-# Getting Started with Create React App
+# 🧠 ZenGradual
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+**ZenGradual** is a modern, open-source web app designed to help GCSE and A-Level students organize, reflect, and revise more effectively. Built to solve real challenges students face while studying, it combines a smart planner, private journal, and gamified revision into one focused platform.
 
-## Available Scripts
+> Plan better. Reflect deeper. Revise smarter.
 
-In the project directory, you can run:
+> Thank you for AI to generate this README, a human version is coming soon.
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## ✨ Features
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 🗓 Planner
+- Add your upcoming exams and get a generated study timeline
+- Organize topics with tags (e.g. "Needs Practice", "Done")
+- Track your study tasks with checklists and progress indicators
 
-### `npm test`
+### 📓 Journal
+- Reflect on your study sessions with a secure, private journal
+- End-to-end encrypted entries for peace of mind
+- Connect journal reflections directly to planner tasks
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 📚 Revision Arena *(WIP)*
+- Gamified quiz experience focused on GCSE Maths (for now)
+- XP, streaks, and level system to keep revision fun
+- Leaderboards to compete with friends
+- Community-driven: Users can contribute questions!
 
-### `npm run build`
+### 👤 Profile
+- View your study stats, XP, and planner progress in one place
+- Login/logout with secure authentication
+- Designed to be minimal, clean, and mobile-friendly
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+---
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 🛠 Tech Stack (NOT AI GENERATED README)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- **Frontend:** React + Tailwind CSS
+- **Backend:** Supabase (Auth + DB + Storage)
+- **Encryption:** -
+- **Hosting:** Vercel
+- **Version Control:** Git + GitHub
 
-### `npm run eject`
+---
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 🌍 Contributing
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Want to contribute questions or features?  
+Pull requests are welcome! Just fork, branch, and PR.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+---
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 📸 Screenshots / Demo *(Coming Soon)*
 
-## Learn More
+---
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## 📄 License
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+MIT License
 
-### Code Splitting
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 🙋 About the Creator
 
-### Analyzing the Bundle Size
+Created by [ProfessorAshley] — just another random person on the internet.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
