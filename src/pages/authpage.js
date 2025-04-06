@@ -12,7 +12,7 @@ const AuthPage = ({ setUser }) => {
   // Handle login
   const handleLogin = async (e) => {
     e.preventDefault();
-    const { user, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -20,7 +20,7 @@ const AuthPage = ({ setUser }) => {
     if (error) {
       setError(error.message);
     } else {
-      setUser(user);
+      setUser(data);
     }
   };
 
