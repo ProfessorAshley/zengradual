@@ -13,6 +13,11 @@ function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const setUser = (user) => {
+    console.log("DBEUG: user is set");
+    setSession(user.id);  // TODO: fix it to determine Sign Up or Sign In. Sign Up seems required user's email confirmation
+  }
+  
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -39,9 +44,9 @@ function App() {
         <Navbar session={session} />
         <Routes>
           <Route path="/" element={<PublicHome />} />
-          <Route path="/dashboard" element={session ? <Dashboard /> : <AuthPage />} />
-          <Route path="/planner" element={session ? <Planner /> : <AuthPage />} />
-          <Route path="/journal" element={session ? <Journal /> : <AuthPage />} />
+          <Route path="/dashboard" element={session ? <Dashboard /> : <AuthPage setUser={setUser} />} />
+          <Route path="/planner" element={session ? <Planner /> : <AuthPage setUser={setUser}  />} />
+          <Route path="/journal" element={session ? <Journal /> : <AuthPage  setUser={setUser} />} />
           <Route path="/login" element={<AuthPage />} />
         </Routes>
       </div>
