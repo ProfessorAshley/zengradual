@@ -47,7 +47,7 @@ function App() {
           <Route path="/dashboard" element={session ? <Dashboard /> : <AuthPage setUser={setUser} />} />
           <Route path="/planner" element={session ? <Planner /> : <AuthPage setUser={setUser}  />} />
           <Route path="/journal" element={session ? <Journal /> : <AuthPage  setUser={setUser} />} />
-          <Route path="/login" element={<AuthPage />} />
+          <Route path="/login" element={<AuthPage setUser={setUser}  />} />
         </Routes>
       </div>
     </Router>
