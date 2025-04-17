@@ -1,5 +1,3 @@
-// src/pages/AuthPage.js
-
 import React, { useState } from 'react';
 import { supabase } from '../supabaseclient';
 import { useNavigate } from 'react-router-dom';

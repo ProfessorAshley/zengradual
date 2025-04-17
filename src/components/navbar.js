@@ -8,7 +8,7 @@ function Navbar({ session }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.reload(); // simple and works
+    window.location.reload(); // just reload
   };
 
   const toggleDropdown = () => {
@@ -24,6 +24,7 @@ function Navbar({ session }) {
         <Link to="/dashboard" className="text-gray-700 hover:text-purple-600">Dashboard</Link>
         <Link to="/planner" className="text-gray-700 hover:text-purple-600">Planner</Link>
         <Link to="/journal" className="text-gray-700 hover:text-purple-600">Journal</Link>
+        <Link to="/revision" className="text-gray-700 hover:text-purple-600">Revision</Link>
 
         {session ? (
           <div className="relative ml-4">
