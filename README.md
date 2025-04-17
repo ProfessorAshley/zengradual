@@ -8,7 +8,7 @@
 
 ---
 
-## ✨ Features
+## ✨ Features *(WIP)*
 
 ### 🗓 Planner
 - Add your upcoming exams and get a generated study timeline
@@ -20,7 +20,7 @@
 - End-to-end encrypted entries for peace of mind
 - Connect journal reflections directly to planner tasks
 
-### 📚 Revision Arena *(WIP)*
+### 📚 Revision Arena
 - Gamified quiz experience focused on GCSE Maths (for now)
 - XP, streaks, and level system to keep revision fun
 - Leaderboards to compete with friends

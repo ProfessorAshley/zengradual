@@ -1,23 +1,88 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import '../App.css';
+// src/pages/dashboard.js
 
-function Dashboard() {
-    return (
-      <div className="flex flex-col items-center justify-center flex-grow bg-gradient-to-br from-blue-50 to-purple-100 p-8 text-center">
-        <h2 className="text-3xl font-semibold text-purple-700 mb-4">Welcome Back 👋</h2>
-        <p className="text-gray-700 mb-2">Here's a quick look at your progress:</p>
-        <ul className="text-gray-600 list-disc list-inside">
-          <li>🧠 XP: 1245</li>
-          <li>📘 Current Streak: 5 days</li>
-          <li>📅 Upcoming Exam: Maths Paper 2 (in 10 days)</li>
-        </ul>
-        <div className="mt-6 flex gap-4">
-          <Link to="/planner" className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-2xl shadow-md transition">Go to Planner</Link>
-          <Link to="/journal" className="bg-white border border-purple-600 hover:bg-purple-50 text-purple-600 px-6 py-3 rounded-2xl shadow-md transition">View Journal</Link>
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../supabaseclient';
+
+const Dashboard = () => {
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user data:', error.message);
+        } else {
+          setUserData(data);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  if (!userData) {
+    return <div className="text-center mt-10">Loading your dashboard...</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">
+          Welcome back, <span className="text-purple-600">{userData.username}</span> 👋
+        </h1>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {/* XP Card */}
+          <div className="bg-white rounded-2xl shadow-md p-6 hover:shadow-lg transition">
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">XP</h2>
+            <p className="text-4xl font-bold text-purple-600">{userData.xp}</p>
+            <p className="text-sm text-gray-500 mt-1">Your total experience points</p>
+          </div>
+
+          {/* Streak Card */}
+          <div className="bg-white rounded-2xl shadow-md p-6 hover:shadow-lg transition">
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">Streak</h2>
+            <p className="text-4xl font-bold text-blue-500">{userData.streak} 🔥</p>
+            <p className="text-sm text-gray-500 mt-1">Days in a row you've studied</p>
+          </div>
+        </div>
+
+              {userData.subjects && userData.subjects.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-xl font-bold text-gray-700 mb-4">Your Subjects</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {userData.subjects.map((subj, idx) => (
+              <div
+                key={idx}
+                className="bg-white p-4 rounded-xl shadow hover:shadow-lg transition"
+              >
+                <h3 className="text-lg font-semibold text-purple-600">{subj.name}</h3>
+                <p className="text-sm text-gray-600">Board: {subj.examBoard}</p>
+                <p className="text-sm text-gray-600">Tier: {subj.tier}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+
+        {/* Placeholder for future features */}
+        <div className="mt-10 bg-white p-6 rounded-xl shadow-inner text-center text-gray-500">
+          More stats & features coming soon!
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+};
 
 export default Dashboard;

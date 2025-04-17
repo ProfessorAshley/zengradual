@@ -1,18 +1,21 @@
 // src/pages/AuthPage.js
 
 import React, { useState } from 'react';
-import { supabase } from '../supabaseclient';  // Import Supabase client
+import { supabase } from '../supabaseclient';
+import { useNavigate } from 'react-router-dom';
 
-const AuthPage = ({ setUser }) => {
+const AuthPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLogin, setIsLogin] = useState(true); // Toggle between login and signup
+  const [username, setUsername] = useState('');
+  const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  // Handle login
   const handleLogin = async (e) => {
     e.preventDefault();
-    const { user, error } = await supabase.auth.signInWithPassword({
+    setError('');
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -20,22 +23,45 @@ const AuthPage = ({ setUser }) => {
     if (error) {
       setError(error.message);
     } else {
-      setUser(user);
+      navigate('/dashboard');
     }
   };
 
-  // Handle signup
   const handleSignup = async (e) => {
     e.preventDefault();
-    const { user, error } = await supabase.auth.signUp({
+    setError('');
+
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     });
 
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
+      setError(signUpError.message);
+      return;
+    }
+
+    const user = data?.user;
+    if (!user) {
+      setError('Signup succeeded but no user returned.');
+      return;
+    }
+
+    // Add user to 'users' table
+    const { error: insertError } = await supabase.from('users').insert([
+      {
+        id: user.id,
+        username: username,
+        xp: 0,
+        streak: 0,
+        subjects: [],
+      },
+    ]);
+
+    if (insertError) {
+      setError('User created, but profile creation failed: ' + insertError.message);
     } else {
-      setUser(user);
+      navigate('/dashboard');
     }
   };
 
@@ -46,9 +72,23 @@ const AuthPage = ({ setUser }) => {
           {isLogin ? 'Login to ZenGradual' : 'Sign Up for ZenGradual'}
         </h2>
 
-        {error && <div className="text-red-500 mb-4">{error}</div>}
+        {error && <div className="text-red-500 mb-4 text-sm text-center">{error}</div>}
 
         <form onSubmit={isLogin ? handleLogin : handleSignup}>
+          {!isLogin && (
+            <div className="mb-4">
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username</label>
+              <input
+                type="text"
+                id="username"
+                className="w-full p-2 mt-1 border border-gray-300 rounded-md"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+          )}
+
           <div className="mb-4">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
             <input
@@ -75,7 +115,7 @@ const AuthPage = ({ setUser }) => {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white p-2 rounded-md"
+            className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition"
           >
             {isLogin ? 'Login' : 'Sign Up'}
           </button>

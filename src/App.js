@@ -14,14 +14,16 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // session check
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);  // Once the session is fetched, set loading to false
+      setLoading(false);
     });
 
+    // Auth state change listener
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setLoading(false);  // Update loading state when session changes
+      setLoading(false);
     });
 
     return () => {
@@ -30,18 +32,22 @@ function App() {
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>;  // Show a loading indicator or spinner while session is being fetched, :D
+    return (
+      <div className="min-h-screen flex items-center justify-center text-lg text-gray-600">
+        Loading...
+      </div>
+    );
   }
 
   return (
     <Router>
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-purple-100">
         <Navbar session={session} />
         <Routes>
           <Route path="/" element={<PublicHome />} />
-          <Route path="/dashboard" element={session ? <Dashboard /> : <AuthPage />} />
-          <Route path="/planner" element={session ? <Planner /> : <AuthPage />} />
-          <Route path="/journal" element={session ? <Journal /> : <AuthPage />} />
+          <Route path="/dashboard" element={session ? <Dashboard session={session} /> : <AuthPage />} />
+          <Route path="/planner" element={session ? <Planner session={session} /> : <AuthPage />} />
+          <Route path="/journal" element={session ? <Journal session={session} /> : <AuthPage />} />
           <Route path="/login" element={<AuthPage />} />
         </Routes>
       </div>
