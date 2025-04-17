@@ -13,6 +13,11 @@ function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const setUser = (user) => {
+    console.log("DBEUG: user is set");
+    setSession(user.id);
+  }
+  
   useEffect(() => {
     // session check
     supabase.auth.getSession().then(({ data: { session } }) => {
