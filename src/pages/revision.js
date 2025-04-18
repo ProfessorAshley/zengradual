@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../supabaseclient';
 import { Link } from 'react-router-dom';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const Revision = () => {
   const [xp, setXP] = useState(0);
   const [streak, setStreak] = useState(0);
   const [didStudyToday, setDidStudyToday] = useState(false);
+  const [xpGraphData, setXpGraphData] = useState([]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -38,6 +40,37 @@ const Revision = () => {
 
         if (logs?.length) {
           setDidStudyToday(true);
+        }
+
+        // Fetch XP Graph Data (last 7 days)
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 6);
+        const startISO = startDate.toISOString().split('T')[0];
+
+        const { data: xpLogs } = await supabase
+          .from('lesson_logs')
+          .select('created_at, xp')
+          .eq('user_id', userId)
+          .gte('created_at', startISO);
+
+        if (xpLogs) {
+          const tempMap = {};
+          xpLogs.forEach(log => {
+            const date = new Date(log.created_at).toISOString().split('T')[0];
+            tempMap[date] = (tempMap[date] || 0) + log.xp;
+          });
+
+          const graphData = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            const key = d.toISOString().split('T')[0];
+            return {
+              date: key.substring(5),
+              xp: tempMap[key] || 0
+            };
+          });
+
+          setXpGraphData(graphData);
         }
       }
     };
@@ -86,7 +119,7 @@ const Revision = () => {
 
         {/* Daily Check-in Box */}
         <motion.div
-          className="mb-16 p-6 bg-white rounded-xl shadow-lg text-left"
+          className="mb-12 p-6 bg-white rounded-xl shadow-lg text-left"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
@@ -104,6 +137,25 @@ const Revision = () => {
               Go to Lessons
             </button>
           </Link>
+        </motion.div>
+
+        {/* XP Graph */}
+        <motion.div
+          className="mb-16 bg-white p-6 rounded-xl shadow-lg"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">📈 XP Gained Over the Last 7 Days</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={xpGraphData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="xp" stroke="#7c3aed" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 8 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </motion.div>
 
         <motion.div

@@ -9,6 +9,7 @@ import Journal from './pages/journal';
 import AuthPage from './pages/authpage';
 import Revision from './pages/revision';
 import Lessons from './pages/lessons';
+import Settings from './pages/settings';
 
 import LessonView from './pages/lessonview';
 import Timetable from './pages/timetable';
@@ -60,8 +61,9 @@ function App() {
           <Route path="/journal" element={session ? <Journal user={session.user} /> : <AuthPage />} />
           <Route path="/revision" element={session ? <Revision /> : <AuthPage />} />
           <Route path="/timetable" element={session ? <Timetable /> : <AuthPage />} />
+          <Route path="/settings" element={session ? <Settings /> : <AuthPage />} />
           <Route path="/lessons" element={session ? <Lessons user={session.user} /> : <AuthPage />} />
-          <Route path="/lesson/:subject/:topic" element={session ? <LessonView user={session.user} /> : <AuthPage />} />
+          <Route path="/lessonview/:subject/:topic/:title" element={session ? <LessonView user={session.user} /> : <AuthPage />} />
           <Route path="/login" element={<AuthPage />} />
         </Routes>
       </div>

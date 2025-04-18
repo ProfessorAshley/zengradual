@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseclient';
+import { Menu, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
 import '../App.css';
 
 function Navbar({ session }) {
@@ -8,7 +10,7 @@ function Navbar({ session }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.reload(); // just reload
+    window.location.reload();
   };
 
   const toggleDropdown = () => {
@@ -16,15 +18,95 @@ function Navbar({ session }) {
   };
 
   return (
-    <nav className="bg-white shadow-md w-full py-4 px-6 flex justify-between items-center relative">
-      <h1 className="text-xl font-bold text-purple-700">ZenGradual</h1>
+    <nav className="bg-white shadow-md w-full py-4 px-6 flex justify-between items-center relative z-50">
+      <Link to="/">
+        <h1 className="text-2xl font-extrabold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300">
+          ZenGradual
+        </h1>
+      </Link>
 
       <div className="space-x-4 flex items-center">
-        <Link to="/" className="text-gray-700 hover:text-purple-600">Home</Link>
         <Link to="/dashboard" className="text-gray-700 hover:text-purple-600">Dashboard</Link>
-        <Link to="/planner" className="text-gray-700 hover:text-purple-600">Planner</Link>
-        <Link to="/journal" className="text-gray-700 hover:text-purple-600">Journal</Link>
-        <Link to="/revision" className="text-gray-700 hover:text-purple-600">Revision</Link>
+
+        <Menu as="div" className="relative inline-block text-left">
+          <div>
+            <Menu.Button className="text-gray-700 hover:text-purple-600">
+              <Link to="/planner">Planner</Link>
+            </Menu.Button>
+          </div>
+          <Transition
+            as={Fragment}
+            enter="transition ease-out duration-100"
+            enterFrom="transform opacity-0 scale-95"
+            enterTo="transform opacity-100 scale-100"
+            leave="transition ease-in duration-75"
+            leaveFrom="transform opacity-100 scale-100"
+            leaveTo="transform opacity-0 scale-95"
+          >
+            <Menu.Items className="absolute z-10 mt-2 w-40 origin-top-left bg-white divide-y divide-gray-100 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+              <div className="px-1 py-1">
+                <Menu.Item>
+                  {({ active }) => (
+                    <Link
+                      to="/journal"
+                      className={`${
+                        active ? 'bg-gray-100' : 'text-gray-700'
+                      } block px-4 py-2 text-sm`}
+                    >
+                      Journal
+                    </Link>
+                  )}
+                </Menu.Item>
+                <Menu.Item>
+                  {({ active }) => (
+                    <Link
+                      to="/timetable"
+                      className={`${
+                        active ? 'bg-gray-100' : 'text-gray-700'
+                      } block px-4 py-2 text-sm`}
+                    >
+                      Timetable
+                    </Link>
+                  )}
+                </Menu.Item>
+              </div>
+            </Menu.Items>
+          </Transition>
+        </Menu>
+
+        <Menu as="div" className="relative inline-block text-left">
+          <div>
+            <Menu.Button className="text-gray-700 hover:text-purple-600">
+              <Link to="/revision">Revision</Link>
+            </Menu.Button>
+          </div>
+          <Transition
+            as={Fragment}
+            enter="transition ease-out duration-100"
+            enterFrom="transform opacity-0 scale-95"
+            enterTo="transform opacity-100 scale-100"
+            leave="transition ease-in duration-75"
+            leaveFrom="transform opacity-100 scale-100"
+            leaveTo="transform opacity-0 scale-95"
+          >
+            <Menu.Items className="absolute z-10 mt-2 w-40 origin-top-left bg-white divide-y divide-gray-100 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+              <div className="px-1 py-1">
+                <Menu.Item>
+                  {({ active }) => (
+                    <Link
+                      to="/lessons"
+                      className={`${
+                        active ? 'bg-gray-100' : 'text-gray-700'
+                      } block px-4 py-2 text-sm`}
+                    >
+                      Lessons
+                    </Link>
+                  )}
+                </Menu.Item>
+              </div>
+            </Menu.Items>
+          </Transition>
+        </Menu>
 
         {session ? (
           <div className="relative ml-4">
@@ -42,6 +124,12 @@ function Navbar({ session }) {
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
                   View Profile
+                </Link>
+                <Link
+                  to="/settings"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Settings
                 </Link>
                 <button
                   onClick={handleLogout}
