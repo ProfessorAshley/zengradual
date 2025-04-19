@@ -7,6 +7,7 @@ import Dashboard from './pages/dashboard';
 import Planner from './pages/planner';
 import Journal from './pages/journal';
 import AuthPage from './pages/authpage';
+import Leaderboards from './pages/leaderboards';
 import Revision from './pages/revision';
 import Lessons from './pages/lessons';
 import Settings from './pages/settings';
@@ -61,6 +62,7 @@ function App() {
           <Route path="/journal" element={session ? <Journal user={session.user} /> : <AuthPage />} />
           <Route path="/revision" element={session ? <Revision /> : <AuthPage />} />
           <Route path="/timetable" element={session ? <Timetable /> : <AuthPage />} />
+          <Route path="/leaderboards" element={session ? <Leaderboards /> : <AuthPage />} />
           <Route path="/settings" element={session ? <Settings /> : <AuthPage />} />
           <Route path="/lessons" element={session ? <Lessons user={session.user} /> : <AuthPage />} />
           <Route path="/lessonview/:subject/:topic/:title" element={session ? <LessonView user={session.user} /> : <AuthPage />} />
