@@ -15,13 +15,12 @@ const LessonView = ({ user }) => {
   const [feedback, setFeedback] = useState(null);
   const [earnedXP, setEarnedXP] = useState(0);
   const [xpAdded, setXpAdded] = useState(false);
+  const [firstTime, setFirstTime] = useState(true);
 
-  // Sound effects
   const correctSound = new Audio('/sounds/correct.mp3');
   const wrongSound = new Audio('/sounds/wrong.mp3');
   const xpSound = new Audio('/sounds/xp.mp3');
 
-  // Fetch lesson and questions
   useEffect(() => {
     const fetchData = async () => {
       const { data: lessonData } = await supabase
@@ -31,27 +30,46 @@ const LessonView = ({ user }) => {
         .eq('topic', topic)
         .eq('title', title)
         .single();
+
       if (!lessonData) return;
       setLesson(lessonData);
 
-      const { data: qData } = await supabase
+      const { data: allQuestions } = await supabase
         .from('questions')
         .select('*')
-        .eq('lesson_id', lessonData.id)
-        .order('number', { ascending: true });
-      setQuestions(qData || []);
+        .eq('lesson_id', lessonData.id);
+
+      const groupedByNumber = {};
+      allQuestions.forEach(q => {
+        if (!groupedByNumber[q.number]) groupedByNumber[q.number] = [];
+        groupedByNumber[q.number].push(q);
+      });
+
+      const selectedQuestions = Object.values(groupedByNumber).map(group => group[Math.floor(Math.random() * group.length)]);
+      selectedQuestions.sort((a, b) => a.number - b.number);
+
+      setQuestions(selectedQuestions);
+
+      const { data: log } = await supabase
+        .from('lesson_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('lesson', lessonData.id);
+
+      setFirstTime(log.length === 0);
     };
+
     fetchData();
-  }, [subject, topic, title]);
+  }, [subject, topic, title, user.id]);
 
   if (!lesson || questions.length === 0) return <div className="p-6">Loading lesson...</div>;
 
   const currentQuestion = questions[currentQ];
   const progressPercent = ((currentQ + 1) / questions.length) * 100;
 
-  // Award XP once per question
   const awardXP = () => {
-    setEarnedXP(prev => prev + 3);
+    const amount = firstTime ? 3 : 1;
+    setEarnedXP(prev => prev + amount);
     xpSound.play();
   };
 
@@ -96,20 +114,25 @@ const LessonView = ({ user }) => {
 
   const addXP = async () => {
     if (!user || xpAdded) return;
-    // Update user xp
+
+    const bonus = firstTime ? 30 : 0;
+    const totalXP = earnedXP + bonus;
+
     const { data: userData } = await supabase
       .from('users')
       .select('xp')
       .eq('id', user.id)
       .single();
+
     await supabase
       .from('users')
-      .update({ xp: (userData?.xp || 0) + earnedXP })
+      .update({ xp: (userData?.xp || 0) + totalXP })
       .eq('id', user.id);
-    // Log lesson completion
+
     await supabase
       .from('lesson_logs')
-      .insert([{ user_id: user.id, xp: earnedXP, lesson: lesson.id }]);
+      .insert([{ user_id: user.id, xp: totalXP, lesson: lesson.id }]);
+
     setXpAdded(true);
     correctSound.play();
   };
@@ -211,13 +234,13 @@ const LessonView = ({ user }) => {
         ) : (
           <div className="text-center">
             <h2 className="text-2xl font-bold text-green-600 mb-4">🎉 Lesson Complete!</h2>
-            <p className="text-lg text-gray-700 mb-2">You earned <strong>{earnedXP}</strong> XP!</p>
+            <p className="text-lg text-gray-700 mb-2">You earned <strong>{earnedXP + (firstTime ? 30 : 0)}</strong> XP!</p>
             {!xpAdded ? (
               <button
                 onClick={addXP}
                 className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600"
               >
-                Collect +{earnedXP} XP
+                Collect +{earnedXP + (firstTime ? 30 : 0)} XP
               </button>
             ) : (
               <p className="text-sm text-gray-600 mb-4">XP added 🎉</p>
