@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import Navbar from './components/navbar';
+import BadgePopup from './components/badgepopup';
+import { useBadgeSystem } from './components/usebadgesystem';
+
 import PublicHome from './pages/publichome';
 import Dashboard from './pages/dashboard';
 import Planner from './pages/planner';
@@ -11,8 +14,8 @@ import Leaderboards from './pages/leaderboards';
 import Revision from './pages/revision';
 import Lessons from './pages/lessons';
 import Admin from './pages/admin';
+import Profile from './pages/profile';
 import Settings from './pages/settings';
-
 import LessonView from './pages/lessonview';
 import Timetable from './pages/timetable';
 import { supabase } from './supabaseclient';
@@ -20,29 +23,33 @@ import { supabase } from './supabaseclient';
 function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const setUser = (user) => {
-    console.log("DBEUG: user is set");
-    setSession(user.id);
-  }
-  
+  const [userProfile, setUserProfile] = useState(null);
   useEffect(() => {
-    // session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const init = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+  
+      setSession(session);
+      setLoading(false);
+    };
+  
+    init();
+  
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setLoading(false);
     });
-
-    // Auth state change listener
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
-
+  
     return () => {
-      listener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
+  
+
+  const { badge, dismiss } = useBadgeSystem(userProfile);
 
   if (loading) {
     return (
@@ -66,10 +73,14 @@ function App() {
           <Route path="/leaderboards" element={session ? <Leaderboards /> : <AuthPage />} />
           <Route path="/settings" element={session ? <Settings /> : <AuthPage />} />
           <Route path="/admin" element={session ? <Admin /> : <AuthPage />} />
+          <Route path="/profile/:username" element={session ? <Profile /> : <AuthPage />} />
           <Route path="/lessons" element={session ? <Lessons user={session.user} /> : <AuthPage />} />
           <Route path="/lessonview/:subject/:topic/:title" element={session ? <LessonView user={session.user} /> : <AuthPage />} />
           <Route path="/login" element={<AuthPage />} />
         </Routes>
+
+        {/* 🏅 Badge Notification */}
+        {badge && <BadgePopup badge={badge} onClose={dismiss} />}
       </div>
     </Router>
   );

@@ -3,10 +3,13 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseclient';
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../App.css';
 
 function Navbar({ session }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [users, setUsers] = useState([]);
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -122,12 +125,12 @@ function Navbar({ session }) {
 
             {dropdownOpen && (
               <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-md z-10">
-                <Link
-                  to="#"
+                <button
+                  onClick={() => navigate(`/profile/${session.users}`)}
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
                   View Profile
-                </Link>
+                </button>
                 <Link
                   to="/settings"
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

@@ -20,6 +20,7 @@ const Settings = () => {
           .from('users')
           .select('username, bio')
           .eq('id', session.user.id)
+          .eq('bio', session.user.bio)
           .single();
         if (data) {
           setUser(session.user);
@@ -36,7 +37,8 @@ const Settings = () => {
     const { error } = await supabase
       .from('users')
       .update({ username, bio })
-      .eq('id', user.id);
+      .eq('id', user.id)
+      .eq('bio', user.bio);
     if (!error) setMessage('✅ Profile updated!');
   };
 
