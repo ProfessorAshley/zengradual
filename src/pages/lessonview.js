@@ -16,6 +16,10 @@ const LessonView = ({ user }) => {
   const [earnedXP, setEarnedXP] = useState(0);
   const [xpAdded, setXpAdded] = useState(false);
   const [firstTime, setFirstTime] = useState(true);
+  const [showHint, setShowHint] = useState(false);
+  const [hint, setHint] = useState('');
+  const [requireHint, setRequireHint] = useState(false);
+  const [delayActive, setDelayActive] = useState(false);
 
   const correctSound = new Audio('/sounds/correct.mp3');
   const wrongSound = new Audio('/sounds/wrong.mp3');
@@ -62,8 +66,6 @@ const LessonView = ({ user }) => {
     fetchData();
   }, [subject, topic, title, user.id]);
 
-  if (!lesson || questions.length === 0) return <div className="p-6">Loading lesson...</div>;
-
   const currentQuestion = questions[currentQ];
   const progressPercent = ((currentQ + 1) / questions.length) * 100;
 
@@ -75,6 +77,12 @@ const LessonView = ({ user }) => {
 
   const handleMultipleChoice = (option) => {
     if (feedback?.type === 'correct') return;
+    if (requireHint && !showHint) {
+      setFeedback({ type: 'hint', msg: 'Please click the hint button first! 💡' });
+      return;
+    }
+    if (delayActive) return;
+
     const correct = option.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase();
     if (correct) {
       correctSound.play();
@@ -83,8 +91,23 @@ const LessonView = ({ user }) => {
       setFeedback({ type: 'correct', msg: 'Correct! 🎉' });
     } else {
       wrongSound.play();
+      setRequireHint(true);
       setFeedback({ type: 'incorrect', msg: 'Try again ❌' });
     }
+  };
+
+  const handleHint = async () => {
+    setShowHint(true);
+    setDelayActive(true);
+    setTimeout(() => setDelayActive(false), 1000);
+
+    const { data } = await supabase
+      .from('questions')
+      .select('hint')
+      .eq('id', currentQuestion.id)
+      .single();
+
+    setHint(data.hint);
   };
 
   const handleWritten = () => {
@@ -105,6 +128,9 @@ const LessonView = ({ user }) => {
     setSelected(null);
     setWrittenAnswer('');
     setFeedback(null);
+    setShowHint(false);
+    setRequireHint(false);
+    setHint('');
     if (currentQ + 1 < questions.length) {
       setCurrentQ(currentQ + 1);
     } else {
@@ -136,6 +162,8 @@ const LessonView = ({ user }) => {
     setXpAdded(true);
     correctSound.play();
   };
+
+  if (!lesson || questions.length === 0) return <div className="p-6">Loading lesson...</div>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 p-6">
@@ -172,6 +200,27 @@ const LessonView = ({ user }) => {
                     {opt}
                   </motion.button>
                 ))}
+                {requireHint && !showHint && (
+                  <motion.button
+                    onClick={handleHint}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-yellow-300 hover:bg-yellow-400 px-4 py-2 rounded text-sm font-semibold"
+                  >
+                    Show Hint
+                  </motion.button>
+                )}
+                <AnimatePresence>
+                  {showHint && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="mt-2 p-3 bg-yellow-100 border border-yellow-300 rounded"
+                    >
+                      💡 {hint}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
 
@@ -211,47 +260,65 @@ const LessonView = ({ user }) => {
 
             {(feedback?.type === 'correct' || currentQuestion.type === 'text') && (
               <div className="flex justify-between items-center">
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.02 }}
                   onClick={handleNext}
                   className="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700"
                 >
                   {currentQ + 1 === questions.length ? 'Finish Lesson' : 'Next'}
-                </button>
-                <div className="flex items-center gap-2 text-purple-700 font-semibold text-sm">
-                  <motion.div
-                    key={earnedXP}
-                    initial={{ scale: 0.9, opacity: 0.6 }}
-                    animate={{ scale: [1.2, 1], opacity: [1, 1], boxShadow: ['0 0 0 rgba(0,0,0,0)', '0 0 15px rgba(34,197,94,0.5)'] }}
-                    transition={{ type: 'spring', stiffness: 200, damping: 10 }}
-                    className="bg-green-100 text-green-800 px-3 py-1 rounded-full shadow-md"
-                  >
-                    +{earnedXP} XP
-                  </motion.div>
-                </div>
+                </motion.button>
+                <motion.div
+                  key={earnedXP}
+                  initial={{ scale: 0.9, opacity: 0.6 }}
+                  animate={{ scale: [1.2, 1], opacity: [1, 1] }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 10 }}
+                  className="bg-green-100 text-green-800 px-3 py-1 rounded-full shadow-md"
+                >
+                  +{earnedXP} XP
+                </motion.div>
               </div>
             )}
           </>
         ) : (
-          <div className="text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center"
+          >
             <h2 className="text-2xl font-bold text-green-600 mb-4">🎉 Lesson Complete!</h2>
-            <p className="text-lg text-gray-700 mb-2">You earned <strong>{earnedXP + (firstTime ? 30 : 0)}</strong> XP!</p>
+            <p className="text-lg text-gray-700 mb-2">
+              You earned <strong>{earnedXP}</strong> XP
+              {firstTime && <> + <strong>30</strong> 🎁 first-time bonus!</>}
+            </p>
             {!xpAdded ? (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={addXP}
                 className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600"
               >
                 Collect +{earnedXP + (firstTime ? 30 : 0)} XP
-              </button>
+              </motion.button>
             ) : (
-              <p className="text-sm text-gray-600 mb-4">XP added 🎉</p>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-sm text-gray-600 mb-4"
+              >
+                XP added 🎉
+              </motion.p>
             )}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.05 }}
               onClick={() => navigate('/lessons')}
               className="mt-4 text-purple-600 underline"
             >
               ← Back to Lessons
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         )}
 
         {!completed && (

@@ -10,6 +10,7 @@ import AuthPage from './pages/authpage';
 import Leaderboards from './pages/leaderboards';
 import Revision from './pages/revision';
 import Lessons from './pages/lessons';
+import Admin from './pages/admin';
 import Settings from './pages/settings';
 
 import LessonView from './pages/lessonview';
@@ -64,6 +65,7 @@ function App() {
           <Route path="/timetable" element={session ? <Timetable /> : <AuthPage />} />
           <Route path="/leaderboards" element={session ? <Leaderboards /> : <AuthPage />} />
           <Route path="/settings" element={session ? <Settings /> : <AuthPage />} />
+          <Route path="/admin" element={session ? <Admin /> : <AuthPage />} />
           <Route path="/lessons" element={session ? <Lessons user={session.user} /> : <AuthPage />} />
           <Route path="/lessonview/:subject/:topic/:title" element={session ? <LessonView user={session.user} /> : <AuthPage />} />
           <Route path="/login" element={<AuthPage />} />

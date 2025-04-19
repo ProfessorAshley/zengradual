@@ -93,14 +93,17 @@ function Navbar({ session }) {
               <div className="px-1 py-1">
                 <Menu.Item>
                   {({ active }) => (
-                    <Link
+                    <><Link
                       to="/lessons"
-                      className={`${
-                        active ? 'bg-gray-100' : 'text-gray-700'
-                      } block px-4 py-2 text-sm`}
+                      className={`${active ? 'bg-gray-100' : 'text-gray-700'} block px-4 py-2 text-sm`}
                     >
                       Lessons
-                    </Link>
+                    </Link><Link
+                      to="/leaderboards"
+                      className={`${active ? 'bg-gray-100' : 'text-gray-700'} block px-4 py-2 text-sm`}
+                    >
+                        Leaderboards
+                      </Link></>
                   )}
                 </Menu.Item>
               </div>
