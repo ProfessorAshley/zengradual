@@ -310,7 +310,6 @@ const LessonView = ({ user }) => {
                 XP added 🎉
               </motion.p>
             )}
-            useBadgeSystem(user)
             <motion.button
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.05 }}
