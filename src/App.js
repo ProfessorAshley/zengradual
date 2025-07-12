@@ -183,6 +183,7 @@ function App() {
             <Route path="/missions" element={session ? <Missions /> : <AuthPage />} />
             <Route path="/shop" element={session ? <Shop /> : <AuthPage />} />
             <Route path="/login" element={<AuthPage />} />
+            <Route path="/auth" element={<AuthPage />} />
           </Routes>
         </AnimatePresence>
 
