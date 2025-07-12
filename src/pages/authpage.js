@@ -29,6 +29,14 @@ const AuthPage = () => {
   const [magicLinkError, setMagicLinkError] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiPieces, setConfettiPieces] = useState([]);
+  
+  // Password reset states
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,10 +75,20 @@ const AuthPage = () => {
     const urlParams = new URLSearchParams(location.search);
     const accessToken = urlParams.get('access_token');
     const refreshToken = urlParams.get('refresh_token');
+    const token = urlParams.get('token');
     const type = urlParams.get('type');
     
-    if (accessToken && refreshToken) {
-      // Handle email confirmation or password reset
+    // Handle password reset flow
+    if (type === 'recovery') {
+      if (token) {
+        // Handle password reset with token
+        handlePasswordReset(token);
+      } else if (accessToken && refreshToken) {
+        // Handle password reset with session tokens
+        handleAuthCallback(accessToken, refreshToken, type);
+      }
+    } else if (accessToken && refreshToken) {
+      // Handle email confirmation
       handleAuthCallback(accessToken, refreshToken, type);
     }
   }, [location]);
@@ -99,6 +117,57 @@ const AuthPage = () => {
     } catch (error) {
       setError('Failed to complete authentication: ' + error.message);
     }
+  };
+
+  const handlePasswordReset = async (token) => {
+    try {
+      // Set the token for password reset
+      setResetToken(token);
+      setShowPasswordReset(true);
+    } catch (error) {
+      setError('Failed to initialize password reset: ' + error.message);
+    }
+  };
+
+  const handlePasswordResetSubmit = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    setIsSubmitting(true);
+
+    // Validate password confirmation
+    if (newPassword !== confirmNewPassword) {
+      setResetError('Passwords do not match');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validate password strength
+    if (newPassword.length < 6) {
+      setResetError('Password must be at least 6 characters long');
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        setResetError('Failed to reset password: ' + error.message);
+      } else {
+        setResetSuccess(true);
+        triggerConfetti();
+        // Redirect to dashboard after a short delay
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 2000);
+      }
+    } catch (error) {
+      setResetError('Failed to reset password: ' + error.message);
+    }
+
+    setIsSubmitting(false);
   };
 
   const handleLogin = async (e) => {
@@ -694,6 +763,102 @@ const AuthPage = () => {
                   >
                     Got it
                   </button>
+                </div>
+              </>
+            )}
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
+      {/* Password Reset Modal */}
+      <Dialog open={showPasswordReset} onClose={() => {}} className="relative z-50">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl transform transition-all duration-300">
+            {!resetSuccess ? (
+              <>
+                <div className="text-center mb-4">
+                  <div className="mx-auto w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <Dialog.Title className="text-xl font-bold mb-2">Set New Password</Dialog.Title>
+                  <Dialog.Description className="text-sm text-gray-600">
+                    Enter your new password below. Make sure it's secure and memorable.
+                  </Dialog.Description>
+                </div>
+                
+                {resetError && (
+                  <div className="text-red-500 mb-4 text-sm p-3 bg-red-50 border border-red-200 rounded-lg animate-shake">{resetError}</div>
+                )}
+
+                <form onSubmit={handlePasswordResetSubmit}>
+                  <div className="mb-4">
+                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                    <input
+                      type="password"
+                      id="newPassword"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  
+                  <div className="mb-6">
+                    <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                    <input
+                      type="password"
+                      id="confirmNewPassword"
+                      className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
+                        confirmNewPassword && newPassword !== confirmNewPassword 
+                          ? 'border-red-300 focus:ring-red-500' 
+                          : 'border-gray-300'
+                      }`}
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      required
+                      minLength={6}
+                    />
+                    {confirmNewPassword && newPassword !== confirmNewPassword && (
+                      <p className="text-red-500 text-xs mt-1">Passwords do not match</p>
+                    )}
+                  </div>
+                  
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={`w-full text-white py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 ${
+                      isSubmitting ? 'bg-gray-400' : 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700'
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Updating...
+                      </div>
+                    ) : (
+                      'Update Password'
+                    )}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <div className="mx-auto w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mb-4 animate-bounce">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <Dialog.Title className="text-xl font-bold mb-2 text-green-600">Password Updated!</Dialog.Title>
+                  <Dialog.Description className="text-sm text-gray-600 mb-6">
+                    Your password has been successfully updated. You'll be redirected to your dashboard in a moment.
+                  </Dialog.Description>
                 </div>
               </>
             )}
