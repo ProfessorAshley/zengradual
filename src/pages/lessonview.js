@@ -25,6 +25,19 @@ const LessonView = ({ user }) => {
   const [xpAdded, setXpAdded] = useState(false);
   const [firstTime, setFirstTime] = useState(true);
   
+  // Lesson statistics
+  const [lessonStats, setLessonStats] = useState({
+    totalQuestions: 0,
+    correctAnswers: 0,
+    firstTryCorrect: 0,
+    hintsUsed: 0,
+    accuracy: 0
+  });
+  
+  // Streak tracking
+  const [streakRenewed, setStreakRenewed] = useState(false);
+  const [streakAnimation, setStreakAnimation] = useState(false);
+  
   // Hint system state
   const [showHint, setShowHint] = useState(false);
   const [hint, setHint] = useState('');
@@ -39,6 +52,9 @@ const LessonView = ({ user }) => {
   const [mode, setMode] = useState(null); // 'single' or 'scroll'
   // For scroll mode: track completed questions and their answers/feedback
   const [completedQuestions, setCompletedQuestions] = useState([]);
+  
+  // Track question attempts for statistics
+  const [questionAttempts, setQuestionAttempts] = useState({});
 
   // Audio objects - moved inside component to avoid memory leaks
   // BUG FIX: Audio objects should be created when needed, not on every render
@@ -201,6 +217,14 @@ const LessonView = ({ user }) => {
     // Prevent rapid clicking during delay
     if (delayActive) return;
 
+    // Track attempts for this question
+    const questionId = currentQuestion.id;
+    const currentAttempts = questionAttempts[questionId] || 0;
+    setQuestionAttempts(prev => ({
+      ...prev,
+      [questionId]: currentAttempts + 1
+    }));
+
     // Validate answer (case-insensitive, trimmed)
     const correct = option.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase();
     
@@ -254,6 +278,14 @@ const LessonView = ({ user }) => {
   const handleWritten = () => {
     if (feedback?.type === 'correct') return;
     
+    // Track attempts for this question
+    const questionId = currentQuestion.id;
+    const currentAttempts = questionAttempts[questionId] || 0;
+    setQuestionAttempts(prev => ({
+      ...prev,
+      [questionId]: currentAttempts + 1
+    }));
+    
     // Validate written answer
     const correct = writtenAnswer.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase();
     
@@ -286,6 +318,113 @@ const LessonView = ({ user }) => {
       setCurrentQ(currentQ + 1);
     } else {
       setCompleted(true);
+      // Calculate final stats and update streak
+      const stats = calculateStats();
+      setLessonStats(stats);
+      updateStreak();
+    }
+  };
+
+  /**
+   * Calculate lesson statistics
+   */
+  const calculateStats = () => {
+    const totalQuestions = questions.length;
+    const correctAnswers = questions.filter((_, index) => {
+      const questionId = questions[index].id;
+      return questionAttempts[questionId] && questionAttempts[questionId] > 0;
+    }).length;
+    
+    const firstTryCorrect = questions.filter((_, index) => {
+      const questionId = questions[index].id;
+      return questionAttempts[questionId] === 1;
+    }).length;
+    
+    const hintsUsed = questions.filter((_, index) => {
+      const questionId = questions[index].id;
+      return questionAttempts[questionId] > 1; // If more than 1 attempt, likely used hint
+    }).length;
+    
+    const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+    
+    return {
+      totalQuestions,
+      correctAnswers,
+      firstTryCorrect,
+      hintsUsed,
+      accuracy
+    };
+  };
+
+  /**
+   * Update user streak
+   */
+  const updateStreak = async () => {
+    if (!user) return;
+
+    try {
+      // Get current user data
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('streak, last_active')
+        .eq('id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('User data fetch error:', userError);
+        return;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const lastActive = userData?.last_active ? new Date(userData.last_active).toISOString().split('T')[0] : null;
+      const currentStreak = userData?.streak || 0;
+
+      let newStreak = currentStreak;
+      let streakUpdated = false;
+
+      if (!lastActive || lastActive !== today) {
+        // Check if yesterday was the last active day (consecutive)
+        if (lastActive) {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split('T')[0];
+          
+          if (lastActive === yesterdayStr) {
+            newStreak = currentStreak + 1;
+            streakUpdated = true;
+          } else {
+            // Streak broken, start over
+            newStreak = 1;
+            streakUpdated = true;
+          }
+        } else {
+          // First time, start streak
+          newStreak = 1;
+          streakUpdated = true;
+        }
+
+        // Update streak and last active
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ 
+            streak: newStreak, 
+            last_active: new Date().toISOString() 
+          })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('Streak update error:', updateError);
+          return;
+        }
+
+        if (streakUpdated) {
+          setStreakRenewed(true);
+          setStreakAnimation(true);
+          setTimeout(() => setStreakAnimation(false), 3000);
+        }
+      }
+    } catch (err) {
+      console.error('Streak update error:', err);
     }
   };
 
@@ -300,10 +439,10 @@ const LessonView = ({ user }) => {
       const bonus = firstTime ? 30 : 0;
       const totalXP = earnedXP + bonus;
 
-      // Get current user XP
+      // Get current user data
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('xp')
+        .select('xp, daily_xp_earned, daily_lessons_completed')
         .eq('id', user.id)
         .single();
 
@@ -312,10 +451,14 @@ const LessonView = ({ user }) => {
         return;
       }
 
-      // Update user XP
+      // Update user XP and daily tracking
       const { error: updateError } = await supabase
         .from('users')
-        .update({ xp: (userData?.xp || 0) + totalXP })
+        .update({ 
+          xp: (userData?.xp || 0) + totalXP,
+          daily_xp_earned: (userData?.daily_xp_earned || 0) + totalXP,
+          daily_lessons_completed: (userData?.daily_lessons_completed || 0) + 1
+        })
         .eq('id', user.id);
 
       if (updateError) {
@@ -402,6 +545,10 @@ const LessonView = ({ user }) => {
       setCurrentQ(currentQ + 1);
     } else {
       setCompleted(true);
+      // Calculate final stats and update streak
+      const stats = calculateStats();
+      setLessonStats(stats);
+      updateStreak();
     }
   };
 
@@ -621,39 +768,106 @@ const LessonView = ({ user }) => {
               transition={{ duration: 0.5 }}
               className="text-center mt-10"
             >
-              <h2 className="text-2xl font-bold text-green-600 mb-4">🎉 Lesson Complete!</h2>
-              <p className="text-lg text-gray-700 mb-2">
-                You earned <strong>{earnedXP}</strong> XP
-                {firstTime && <> + <strong>30</strong> 🎁 first-time bonus!</>}
-              </p>
-              {/* XP Collection Button */}
-              {!xpAdded ? (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={addXP}
-                  className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600"
-                >
-                  Collect +{earnedXP + (firstTime ? 30 : 0)} XP
-                </motion.button>
-              ) : (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-sm text-gray-600 mb-4"
-                >
-                  XP added 🎉
-                </motion.p>
-              )}
-              {/* Back to Lessons Button */}
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.05 }}
-                onClick={() => navigate('/lessons')}
-                className="mt-4 text-purple-600 underline"
-              >
-                ← Back to Lessons
-              </motion.button>
+              {/* Streak Animation */}
+              <AnimatePresence>
+                {streakAnimation && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    className="fixed inset-0 flex items-center justify-center z-50 bg-black/50"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.5, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      exit={{ scale: 0.5, rotate: 180 }}
+                      className="bg-gradient-to-r from-orange-400 to-red-500 text-white p-8 rounded-2xl shadow-2xl text-center"
+                    >
+                      <div className="text-6xl mb-4">🔥</div>
+                      <h2 className="text-3xl font-bold mb-2">Streak Renewed!</h2>
+                      <p className="text-xl">Keep up the great work!</p>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl mx-auto">
+                <h2 className="text-3xl font-bold text-green-600 mb-6">🎉 Lesson Complete!</h2>
+                
+                {/* First Time Badge */}
+                {firstTime && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full inline-block mb-6"
+                  >
+                    🎁 First Time Completion!
+                  </motion.div>
+                )}
+
+                {/* Statistics Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-blue-600">{lessonStats.totalQuestions}</div>
+                    <div className="text-sm text-blue-600">Total Questions</div>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-green-600">{lessonStats.correctAnswers}</div>
+                    <div className="text-sm text-green-600">Correct Answers</div>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-purple-600">{lessonStats.firstTryCorrect}</div>
+                    <div className="text-sm text-purple-600">First Try</div>
+                  </div>
+                  <div className="bg-orange-50 p-4 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-orange-600">{lessonStats.accuracy}%</div>
+                    <div className="text-sm text-orange-600">Accuracy</div>
+                  </div>
+                </div>
+
+                {/* XP Section */}
+                <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-6 rounded-xl mb-6">
+                  <h3 className="text-xl font-bold mb-2">XP Earned</h3>
+                  <div className="text-3xl font-bold mb-2">
+                    +{earnedXP} XP
+                    {firstTime && <span className="text-yellow-300"> + 30 🎁</span>}
+                  </div>
+                  <p className="text-green-100">
+                    {firstTime ? 'First time bonus included!' : 'Great job!'}
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  {!xpAdded ? (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={addXP}
+                      className="bg-green-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                    >
+                      Collect +{earnedXP + (firstTime ? 30 : 0)} XP
+                    </motion.button>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="bg-green-100 text-green-800 px-8 py-3 rounded-lg font-semibold"
+                    >
+                      ✅ XP Collected!
+                    </motion.div>
+                  )}
+                  
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => navigate('/lessons')}
+                    className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+                  >
+                    ← Back to Lessons
+                  </motion.button>
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -821,41 +1035,106 @@ const LessonView = ({ user }) => {
             transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <h2 className="text-2xl font-bold text-green-600 mb-4">🎉 Lesson Complete!</h2>
-            <p className="text-lg text-gray-700 mb-2">
-              You earned <strong>{earnedXP}</strong> XP
-              {firstTime && <> + <strong>30</strong> 🎁 first-time bonus!</>}
-            </p>
-            
-            {/* XP Collection Button */}
-            {!xpAdded ? (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={addXP}
-                className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600"
-              >
-                Collect +{earnedXP + (firstTime ? 30 : 0)} XP
-              </motion.button>
-            ) : (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-sm text-gray-600 mb-4"
-              >
-                XP added 🎉
-              </motion.p>
-            )}
-            
-            {/* Back to Lessons Button */}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.05 }}
-              onClick={() => navigate('/lessons')}
-              className="mt-4 text-purple-600 underline"
-            >
-              ← Back to Lessons
-            </motion.button>
+            {/* Streak Animation */}
+            <AnimatePresence>
+              {streakAnimation && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  className="fixed inset-0 flex items-center justify-center z-50 bg-black/50"
+                >
+                  <motion.div
+                    initial={{ scale: 0.5, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    exit={{ scale: 0.5, rotate: 180 }}
+                    className="bg-gradient-to-r from-orange-400 to-red-500 text-white p-8 rounded-2xl shadow-2xl text-center"
+                  >
+                    <div className="text-6xl mb-4">🔥</div>
+                    <h2 className="text-3xl font-bold mb-2">Streak Renewed!</h2>
+                    <p className="text-xl">Keep up the great work!</p>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl mx-auto">
+              <h2 className="text-3xl font-bold text-green-600 mb-6">🎉 Lesson Complete!</h2>
+              
+              {/* First Time Badge */}
+              {firstTime && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full inline-block mb-6"
+                >
+                  🎁 First Time Completion!
+                </motion.div>
+              )}
+
+              {/* Statistics Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-blue-600">{lessonStats.totalQuestions}</div>
+                  <div className="text-sm text-blue-600">Total Questions</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-green-600">{lessonStats.correctAnswers}</div>
+                  <div className="text-sm text-green-600">Correct Answers</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-purple-600">{lessonStats.firstTryCorrect}</div>
+                  <div className="text-sm text-purple-600">First Try</div>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-orange-600">{lessonStats.accuracy}%</div>
+                  <div className="text-sm text-orange-600">Accuracy</div>
+                </div>
+              </div>
+
+              {/* XP Section */}
+              <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-6 rounded-xl mb-6">
+                <h3 className="text-xl font-bold mb-2">XP Earned</h3>
+                <div className="text-3xl font-bold mb-2">
+                  +{earnedXP} XP
+                  {firstTime && <span className="text-yellow-300"> + 30 🎁</span>}
+                </div>
+                <p className="text-green-100">
+                  {firstTime ? 'First time bonus included!' : 'Great job!'}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                {!xpAdded ? (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={addXP}
+                    className="bg-green-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                  >
+                    Collect +{earnedXP + (firstTime ? 30 : 0)} XP
+                  </motion.button>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="bg-green-100 text-green-800 px-8 py-3 rounded-lg font-semibold"
+                  >
+                    ✅ XP Collected!
+                  </motion.div>
+                )}
+                
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => navigate('/lessons')}
+                  className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+                >
+                  ← Back to Lessons
+                </motion.button>
+              </div>
+            </div>
           </motion.div>
         )}
 

@@ -20,6 +20,8 @@ import Settings from './pages/settings';
 import LessonView from './pages/lessonview';
 import Timetable from './pages/timetable';
 import Drill from './pages/drill';
+import Missions from './pages/missions';
+import Shop from './pages/shop';
 import { supabase } from './supabaseclient';
 
 function App() {
@@ -178,6 +180,8 @@ function App() {
             <Route path="/lessons" element={session ? <Lessons user={session.user} /> : <AuthPage />} />
             <Route path="/lessonview/:subject/:topic/:title" element={session ? <LessonView user={session.user} /> : <AuthPage />} />
             <Route path="/drill/:subject/:topic/:count" element={session ? <Drill user={session.user} /> : <AuthPage />} />
+            <Route path="/missions" element={session ? <Missions /> : <AuthPage />} />
+            <Route path="/shop" element={session ? <Shop /> : <AuthPage />} />
             <Route path="/login" element={<AuthPage />} />
           </Routes>
         </AnimatePresence>

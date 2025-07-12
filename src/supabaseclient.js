@@ -8,11 +8,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase environment variables are not configured');
 }
 
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    redirectTo: `${window.location.origin}/auth`
   }
 });
